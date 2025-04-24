@@ -1,2 +1,2 @@
 # flipper-zero-stuff
-Different things for the Flipper Zero
+Different things for the Flipper Zero.
