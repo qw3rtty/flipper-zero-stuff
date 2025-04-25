@@ -1,4 +1,5 @@
 REM Demo DuckyScript for Flipper Zero which opens Safari and navigte to an URL.
+REM OS: iOS
 REM Author: qw3rrty (github.com/qw3rtty)
 
 DELAY 1000
@@ -6,6 +7,11 @@ GUI SPACE
 DELAY 1000
 STRING Safari
 ENTER
+DELAY 2000
+GUI t
+DELAY 2000
+GUI l
 DELAY 1000
 STRING https://github.com/qw3rtty/flipper-zero-stuff
+DELAY 1000
 ENTER
