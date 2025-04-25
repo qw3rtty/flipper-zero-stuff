@@ -1,13 +1,10 @@
-REM Demo DuckyScript for Flipper Zero which opens Safari and navigte to an URL.
-REM OS: iOS
+REM Demo DuckyScript for Flipper Zero which opens Browser and opens an URL.
+REM OS: Android
 REM Author: qw3rtty (github.com/qw3rtty)
 
 DELAY 1000
-GUI SPACE
+GUI b
 DELAY 1000
-STRING Safari
-ENTER
-DELAY 2000
 GUI t
 DELAY 2000
 GUI l
