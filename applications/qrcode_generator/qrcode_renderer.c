@@ -2,7 +2,7 @@
 #include "qrencode/qrcodegen.h"
 #include <gui/canvas.h>
 
-void render_qrcode(Canvas* canvas, const uint8_t* qrcode) {
+/*void render_qrcode(Canvas* canvas, const uint8_t* qrcode) {
 	int size = qrcodegen_getSize(qrcode);
 	const int scale = 2;
 	const int offset_x = 64 - (size * scale) / 2;
@@ -33,5 +33,5 @@ static void generate_and_print_qrcode(Canvas* canvas, const char* text) {
 			qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 
     render_qrcode(canvas, qrcode);
-}
+}*/
 
