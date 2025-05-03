@@ -67,7 +67,7 @@ typedef enum {
 // This function is called when a custom event happens
 // This event can be triggered when some pin is connected, a timer, etc
 static bool basic_scene_custom_callback(void *context, uint32_t custom_event) {
-	furi_assert(context);
+	//furi_assert(context);
 	App *app = context;
 	return scene_manager_handle_custom_event(app->scene_manager, custom_event);
 }
@@ -283,21 +283,11 @@ static void app_free(App* app) {
 
 
 
-static void generate_and_print_qrcode(Canvas* canvas, const char* text) {
-	enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
-
-	// Make and print the QR Code symbol
-	uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
-	uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
-	qrcodegen_encodeText(text, tempBuffer, qrcode, errCorLvl,
-			qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
-
-    render_qrcode(canvas, qrcode);
-}
 
 void draw_callback (Canvas* const canvas,  void* ctx) {
-    furi_assert(canvas);
-    furi_assert(ctx);
+    //furi_assert(canvas);
+    //furi_assert(ctx);
+    UNUSED(ctx);
 
 	const char* text = "Hello, world!";
     generate_and_print_qrcode(canvas, text);
