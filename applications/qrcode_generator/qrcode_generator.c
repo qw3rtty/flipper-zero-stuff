@@ -1,5 +1,5 @@
 #include "qrencode/qrcodegen.h"
-//#include "qrcode_renderer.h"
+#include "qrcode_renderer.h"
 #include <furi.h>
 
 #include <gui/gui.h>
@@ -30,6 +30,7 @@ typedef enum {
     QrCodeWidgetView,
     QrCodeTextInputView,
     QrCodeTextBoxView,
+    QrCodeCanvasView,
 } QrCodeView;
 
 // App object
@@ -43,6 +44,7 @@ typedef struct App {
     TextBox *text_box;
     char *qrcode_text;
     uint8_t qrcode_text_size;
+    View *qrcode_canvas_view;
 } App;
 
 // Refence to item menus. Avoid magic numbers
@@ -61,21 +63,28 @@ typedef enum {
     QrCodeInputSceneSaveEvent,
 } QrCodeInputEvent;
 
+
 // QRCode generation code
-// TODO: Put correct code here
-char *qrcode(const char *data) {
-    if (data == NULL) {
-        return NULL;
-    }
+// TODO: Move to proper location
+void generate_and_print_qrcode(Canvas* canvas, void *context) {
+    UNUSED(context); 
+    canvas_clear(canvas);
+    canvas_set_font(canvas, FontPrimary);
+    canvas_draw_str(canvas, 5, 20, "Hello...");
+    //App *app = context;
+    /*enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
+    const char *text = "Hello";
 
-    char *result = malloc(strlen(data) + 1);
+	// Make and print the QR Code symbol
+	uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
+	uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
+	qrcodegen_encodeText(text, tempBuffer, qrcode, errCorLvl,
+			qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 
-    if (result != NULL) {
-        strcpy(result, data);
-    }
-
-    return result;
+    if (!canvas) return;
+    render_qrcode(canvas, qrcode);*/
 }
+
 
 // Function for stub menu
 void qrcode_menu_callback(void *context, uint32_t index) {
@@ -173,15 +182,14 @@ void qrcode_greeting_input_scene_on_exit(void *context) {
 }
 
 void generate_qrcode_on_enter(void *context) {
-    // Aca deberiamos transformar el texto a qrcode
     App *app = context;
-    
-    text_box_reset(app->text_box);
-    text_box_set_text(app->text_box, app->qrcode_text);
+   
+    //text_box_reset(app->text_box);
+    //text_box_set_text(app->text_box, app->qrcode_text);
     // TODO: Update when correct QRCode generation function exists...
     //text_box_set_text(app->text_box, qrcode(app->qrcode_text));
     
-    view_dispatcher_switch_to_view(app->view_dispatcher, QrCodeTextBoxView);
+    view_dispatcher_switch_to_view(app->view_dispatcher, QrCodeCanvasView);
 }
 
 bool qrcode_greeting_message_scene_on_event(void *context, SceneManagerEvent event) {
@@ -298,6 +306,13 @@ static App *app_alloc() {
     app->text_box = text_box_alloc();
     view_dispatcher_add_view(app->view_dispatcher, QrCodeTextBoxView,
             text_box_get_view(app->text_box));
+
+    app->qrcode_canvas_view = view_alloc();
+    view_set_draw_callback(app->qrcode_canvas_view, generate_and_print_qrcode);
+    view_set_context(app->qrcode_canvas_view, app->view_dispatcher); 
+    view_dispatcher_add_view(app->view_dispatcher, QrCodeCanvasView, 
+            app->qrcode_canvas_view);
+
     return app;
 }
 
@@ -309,6 +324,7 @@ static void app_free(App *app) {
     view_dispatcher_remove_view(app->view_dispatcher, QrCodeWidgetView);
     view_dispatcher_remove_view(app->view_dispatcher, QrCodeTextInputView);
     view_dispatcher_remove_view(app->view_dispatcher, QrCodeTextBoxView);
+    view_dispatcher_remove_view(app->view_dispatcher, QrCodeCanvasView);
 
     scene_manager_free(app->scene_manager);
     view_dispatcher_free(app->view_dispatcher);
@@ -317,6 +333,7 @@ static void app_free(App *app) {
     widget_free(app->widget);
     text_input_free(app->text_input);
     text_box_free(app->text_box);
+    view_free(app->qrcode_canvas_view);
 
     free(app);
 }
