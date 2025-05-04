@@ -309,7 +309,7 @@ static App *app_alloc() {
 
     app->qrcode_canvas_view = view_alloc();
     view_set_draw_callback(app->qrcode_canvas_view, generate_and_print_qrcode);
-    view_set_context(app->qrcode_canvas_view, app->view_dispatcher); 
+    view_set_context(app->qrcode_canvas_view, app); 
     view_dispatcher_add_view(app->view_dispatcher, QrCodeCanvasView, 
             app->qrcode_canvas_view);
 
