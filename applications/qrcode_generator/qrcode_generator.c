@@ -1,5 +1,4 @@
 #include "qrencode/qrcodegen.h"
-#include "qrcode_renderer.h"
 #include <furi.h>
 
 #include <gui/gui.h>
@@ -33,6 +32,13 @@ typedef enum {
     QrCodeCanvasView,
 } QrCodeView;
 
+// Model for QrCode View
+typedef struct {
+    uint8_t *qrcode;
+    uint8_t *buffer;
+    size_t buffer_size;
+} QrCodeModel;
+
 // App object
 
 typedef struct App {
@@ -42,8 +48,6 @@ typedef struct App {
     Widget *widget;
     TextInput *text_input;
     TextBox *text_box;
-    uint8_t *qrcode;
-    uint8_t *qrcode_temp_buffer;
     char *qrcode_text;
     uint8_t qrcode_text_size;
     View *qrcode_canvas_view;
@@ -66,25 +70,26 @@ typedef enum {
 } QrCodeInputEvent;
 
 
-// QRCode generation code
-// TODO: Move to proper location
-void generate_and_print_qrcode(Canvas* canvas, void *context) {
-    //UNUSED(context); 
-    //canvas_clear(canvas);
-    //canvas_set_font(canvas, FontPrimary);
-    //canvas_draw_str(canvas, 5, 20, "Hello...");
-    //furi_assert(context);
-    App *app = (App *)context;
-    enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
-    //const char *text = "Hello";
+// QRCode draw code
+void draw_qrcode(Canvas* canvas, void *model) {
+    QrCodeModel *qrcodeModel = (QrCodeModel*)model;
 
-	// Make and print the QR Code symbol
-	//uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
-	//uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
-	qrcodegen_encodeText(app->qrcode_text, app->qrcode_temp_buffer, app->qrcode, errCorLvl,
-			qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+	int size = qrcodegen_getSize(qrcodeModel->qrcode);
+	const int scale = 2;
+	const int offset_x = 64 - (size * scale) / 2;
+	const int offset_y = 32 - (size * scale) / 2;
 
-    render_qrcode(canvas, app->qrcode);
+    canvas_clear(canvas);
+    canvas_set_color(canvas, ColorBlack);
+
+	for(int y = 0; y < size; y++) {
+		for(int x = 0; x < size; x++) {
+			if(qrcodegen_getModule(qrcodeModel->qrcode, x, y)) {
+				canvas_draw_box(canvas, offset_x + x * scale, offset_y + y * scale, scale, scale);
+			}
+		}
+	}
+    canvas_commit(canvas);
 }
 
 
@@ -184,12 +189,14 @@ void qrcode_greeting_input_scene_on_exit(void *context) {
 }
 
 void generate_qrcode_on_enter(void *context) {
-    App *app = context;
+    App *app = (App*)context;
    
-    //text_box_reset(app->text_box);
-    //text_box_set_text(app->text_box, app->qrcode_text);
-    // TODO: Update when correct QRCode generation function exists...
-    //text_box_set_text(app->text_box, qrcode(app->qrcode_text));
+    QrCodeModel *qrcodeModel = view_get_model(app->qrcode_canvas_view);
+    enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
+	
+    qrcodegen_encodeText(app->qrcode_text, qrcodeModel->buffer, qrcodeModel->qrcode, errCorLvl,
+			qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+    view_commit_model(app->qrcode_canvas_view, false);
     
     view_dispatcher_switch_to_view(app->view_dispatcher, QrCodeCanvasView);
 }
@@ -285,10 +292,6 @@ static App *app_alloc() {
     app->qrcode_text_size = 128;
     app->qrcode_text = malloc(app->qrcode_text_size);
 
-    size_t buffer = qrcodegen_BUFFER_LEN_MAX;
-    app->qrcode = malloc(buffer);
-    app->qrcode_temp_buffer = malloc(buffer);
-
     app->scene_manager = scene_manager_alloc(&qrcode_scene_manager_handlers, app);
     app->view_dispatcher = view_dispatcher_alloc();
     view_dispatcher_set_event_callback_context(app->view_dispatcher, app);
@@ -314,8 +317,9 @@ static App *app_alloc() {
             text_box_get_view(app->text_box));
 
     app->qrcode_canvas_view = view_alloc();
+    view_allocate_model(app->qrcode_canvas_view, ViewModelTypeLockFree, sizeof(QrCodeModel));
     view_set_context(app->qrcode_canvas_view, app); 
-    view_set_draw_callback(app->qrcode_canvas_view, generate_and_print_qrcode);
+    view_set_draw_callback(app->qrcode_canvas_view, draw_qrcode);
     view_dispatcher_add_view(app->view_dispatcher, QrCodeCanvasView, 
             app->qrcode_canvas_view);
 
@@ -339,10 +343,8 @@ static void app_free(App *app) {
     widget_free(app->widget);
     text_input_free(app->text_input);
     text_box_free(app->text_box);
+    view_free_model(app->qrcode_canvas_view);
     view_free(app->qrcode_canvas_view);
-
-    free(app->qrcode);
-    free(app->qrcode_temp_buffer);
 
     free(app);
 }
