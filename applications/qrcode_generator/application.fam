@@ -1,17 +1,16 @@
 # For details & more options, see documentation/AppManifests.md in firmware repo
 
 App(
-    appid="qrcode_generator",  # Must be unique
-    name="App qrcode_generator",  # Displayed in menus
+    appid="qty_qrcode_generator",  # Must be unique
+    name="QRCode Generator",  # Displayed in menus
     apptype=FlipperAppType.EXTERNAL,
     entry_point="qrcode_generator_app",
     stack_size=4096,
     fap_category="Examples",
-    # Optional values
-    # fap_version="0.1",
+    fap_version="0.1",
     fap_icon="qrcode_generator.png",  # 10x10 1-bit PNG
-    # fap_description="A simple app",
-    # fap_author="J. Doe",
-    # fap_weburl="https://github.com/user/qrcode_generator",
+    fap_description="A QRCode generator app",
+    fap_author="Thomas Schwarz aka qw3rtty",
+    fap_weburl="https://github.com/qw3rtty/flipperzero_qrcode_generator",
     fap_icon_assets="images",  # Image assets to compile for this application
 )
