@@ -1,5 +1,7 @@
 #include "qrencode/qrcodegen.h"
 #include <furi.h>
+#include <storage/storage.h>
+#include <dialogs/dialogs.h>
 
 #include <gui/gui.h>
 #include <gui/modules/submenu.h>
@@ -14,12 +16,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define QRCODE_GEN_FOLDER "/ext/apps_data/"
+
 // Diffrent app scenes
 typedef enum {
 	MainMenuScene,
 	QrCodeInputScene,
 	QrCodeMessageScene,
 	ReadmeScene,
+	SavedScene,
 	QrCodeSceneCount,
 } QrCodeScene;
 
@@ -57,17 +62,72 @@ typedef struct App {
 typedef enum {
 	MainMenuSceneQrCode,
 	MainMenuSceneReadme,
+	MainMenuSceneSaved,
 } MainMenuSceneIndex;
 
 // Reference to custom events. Avoid magic numbers
 typedef enum {
 	MainMenuSceneQrCodeEvent,
 	MainMenuSceneReadmeEvent,
+	MainMenuSceneSavedEvent,
 } QrCodeMainMenuEvent;
 
 typedef enum {
 	QrCodeInputSceneSaveEvent,
 } QrCodeInputEvent;
+
+
+//const char* file_path = "/ext/apps_data/test.txt"; // Example path
+//const char* text_to_write = "Hello, Flipper Zero!";
+//write_text_to_file(file_path, text_to_write);
+
+// Function to write text to a file
+void write_text_to_file(const char* file_path, const char* text) {
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    if (!storage) {
+        printf("Failed to open storage\n");
+        return;
+    }
+
+    File* file = storage_file_alloc(storage);
+    if(storage_file_open(file, file_path, FSAM_WRITE, FSOM_CREATE_ALWAYS)) {
+        storage_file_write(file, text, strlen(text));
+        storage_file_close(file);
+        printf("Text written to file successfully\n");
+    } else {
+        printf("Failed to open file for writing\n");
+    }
+
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+}
+
+// Function to read text from a file
+void read_text_from_file(const char* file_path) {
+    Storage* storage = furi_record_open(RECORD_STORAGE);
+    if (!storage) {
+        printf("Failed to open storage\n");
+        return;
+    }
+
+    File* file = storage_file_alloc(storage);
+    if(storage_file_open(file, file_path, FSAM_READ, FSOM_OPEN_EXISTING)) {
+        char buffer[128]; // Buffer to store read content
+        ssize_t read_bytes;
+
+        while((read_bytes = storage_file_read(file, buffer, sizeof(buffer) - 1)) > 0) {
+            buffer[read_bytes] = '\0'; // Null-terminate the string
+            printf("Read from file: %s\n", buffer);
+        }
+
+        storage_file_close(file);
+    } else {
+        printf("Failed to open file for reading\n");
+    }
+
+    storage_file_free(file);
+    furi_record_close(RECORD_STORAGE);
+}
 
 
 // QRCode draw code
@@ -107,6 +167,12 @@ void qrcode_menu_callback(void *context, uint32_t index) {
 			scene_manager_handle_custom_event(app->scene_manager,
 					MainMenuSceneQrCodeEvent);
 			break;
+
+		case MainMenuSceneSaved:
+			scene_manager_handle_custom_event(app->scene_manager,
+					MainMenuSceneSavedEvent);
+			break;
+
 	}
 }
 
@@ -120,6 +186,8 @@ void qrcode_main_menu_scene_on_enter(void *context) {
 
 	submenu_add_item(app->submenu, "Generate",
 			MainMenuSceneQrCode, qrcode_menu_callback, app);
+	submenu_add_item(app->submenu, "Saved",
+			MainMenuSceneSaved, qrcode_menu_callback, app);
 	submenu_add_item(app->submenu, "README", MainMenuSceneReadme,
 			qrcode_menu_callback, app);
 
@@ -141,6 +209,11 @@ bool qrcode_main_menu_scene_on_event(void *context, SceneManagerEvent event) {
 
 				case MainMenuSceneQrCodeEvent:
 					scene_manager_next_scene(app->scene_manager, QrCodeInputScene);
+					consumed = true;
+					break;
+
+				case MainMenuSceneSavedEvent:
+					scene_manager_next_scene(app->scene_manager, SavedScene);
 					consumed = true;
 					break;
 			}
@@ -249,6 +322,70 @@ void readme_scene_on_exit(void *context) {
 	submenu_reset(app->submenu);
 }
 
+void saved_scene_on_enter(void *context) {
+	//UNUSED(context);
+	App *app = context;
+
+	// TODO: Extract code to function, it is duplicate!!!!
+	QrCodeModel *qrcodeModel = view_get_model(app->qrcode_canvas_view);
+	enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
+
+	FuriString* file_path = furi_string_alloc();
+	furi_string_set(file_path, QRCODE_GEN_FOLDER);
+
+	DialogsFileBrowserOptions browser_options;
+	dialog_file_browser_set_basic_options(&browser_options, ".txt", 0);
+	browser_options.hide_ext = false;
+	browser_options.base_path = QRCODE_GEN_FOLDER;
+
+	DialogsApp* dialogs = furi_record_open(RECORD_DIALOGS);
+	bool res = dialog_file_browser_show(dialogs, file_path, file_path, &browser_options);
+
+	if (!res) {
+		//FURI_LOG_E(TAG, "No file selected");
+		return;
+	}
+
+	// TODO: Update read function!!!
+	//read_text_from_file(furi_string_get_cstr(file_path), app->qrcode_text);
+	app->qrcode_text = strdup(furi_string_get_cstr(file_path));
+
+
+	// Allocate buffers if not already allocated
+	static const size_t buffer_len = qrcodegen_BUFFER_LEN_MAX;
+	static const size_t qrcode_len = qrcodegen_BUFFER_LEN_MAX;
+
+	if (!qrcodeModel->buffer) {
+		qrcodeModel->buffer = malloc(buffer_len);
+		furi_check(qrcodeModel->buffer); // Optional safety check
+	}
+
+	if (!qrcodeModel->qrcode) {
+		qrcodeModel->qrcode = malloc(qrcode_len);
+		furi_check(qrcodeModel->qrcode); // Optional safety check
+	}
+
+	qrcodegen_encodeText(app->qrcode_text, qrcodeModel->buffer, qrcodeModel->qrcode, errCorLvl,
+			qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+	view_commit_model(app->qrcode_canvas_view, false);
+
+
+	furi_record_close(RECORD_DIALOGS);
+	view_dispatcher_switch_to_view(app->view_dispatcher, QrCodeCanvasView);
+}
+
+bool saved_scene_on_event(void *context, SceneManagerEvent event) {
+	UNUSED(context);
+	UNUSED(event);
+
+	return false; // event not handled.
+}
+
+void saved_scene_on_exit(void *context) {
+	App *app = context;
+	submenu_reset(app->submenu);
+}
+
 // Arrays for the handlers
 
 void (*const qrcode_scene_on_enter_handlers[])(void *) = {
@@ -256,6 +393,7 @@ void (*const qrcode_scene_on_enter_handlers[])(void *) = {
 	qrcode_input_scene_on_enter,
 	generate_qrcode_on_enter,
 	readme_scene_on_enter,
+	saved_scene_on_enter,
 };
 
 bool (*const qrcode_scene_on_event_handlers[])(void *, SceneManagerEvent) = {
@@ -263,6 +401,7 @@ bool (*const qrcode_scene_on_event_handlers[])(void *, SceneManagerEvent) = {
 	qrcode_greeting_input_scene_on_event,
 	qrcode_greeting_message_scene_on_event,
 	readme_scene_on_event,
+	saved_scene_on_event,
 };
 
 void (*const qrcode_scene_on_exit_handlers[])(void *) = {
@@ -270,6 +409,7 @@ void (*const qrcode_scene_on_exit_handlers[])(void *) = {
 	qrcode_greeting_input_scene_on_exit,
 	qrcode_greeting_message_scene_on_exit,
 	readme_scene_on_exit,
+	saved_scene_on_exit,
 };
 
 static const SceneManagerHandlers qrcode_scene_manager_handlers = {
