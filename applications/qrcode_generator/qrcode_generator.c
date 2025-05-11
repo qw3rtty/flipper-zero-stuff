@@ -152,6 +152,30 @@ void draw_qrcode(Canvas* canvas, void *model) {
 	canvas_commit(canvas);
 }
 
+// Generates the qrcode
+void generate_qrcode(App* app) {
+	QrCodeModel *qrcodeModel = view_get_model(app->qrcode_canvas_view);
+	enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
+
+	// Allocate buffers if not already allocated
+	static const size_t buffer_len = qrcodegen_BUFFER_LEN_MAX;
+	static const size_t qrcode_len = qrcodegen_BUFFER_LEN_MAX;
+
+	if (!qrcodeModel->buffer) {
+		qrcodeModel->buffer = malloc(buffer_len);
+		furi_check(qrcodeModel->buffer); // Optional safety check
+	}
+
+	if (!qrcodeModel->qrcode) {
+		qrcodeModel->qrcode = malloc(qrcode_len);
+		furi_check(qrcodeModel->qrcode); // Optional safety check
+	}
+
+	qrcodegen_encodeText(app->qrcode_text, qrcodeModel->buffer, qrcodeModel->qrcode, errCorLvl,
+			qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+	view_commit_model(app->qrcode_canvas_view, false);
+}
+
 
 // Function for stub menu
 void qrcode_menu_callback(void *context, uint32_t index) {
@@ -263,27 +287,8 @@ void qrcode_greeting_input_scene_on_exit(void *context) {
 
 void generate_qrcode_on_enter(void *context) {
 	App *app = (App*)context;
-	QrCodeModel *qrcodeModel = view_get_model(app->qrcode_canvas_view);
-	enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
-
-	// Allocate buffers if not already allocated
-	static const size_t buffer_len = qrcodegen_BUFFER_LEN_MAX;
-	static const size_t qrcode_len = qrcodegen_BUFFER_LEN_MAX;
-
-	if (!qrcodeModel->buffer) {
-		qrcodeModel->buffer = malloc(buffer_len);
-		furi_check(qrcodeModel->buffer); // Optional safety check
-	}
-
-	if (!qrcodeModel->qrcode) {
-		qrcodeModel->qrcode = malloc(qrcode_len);
-		furi_check(qrcodeModel->qrcode); // Optional safety check
-	}
-
-	qrcodegen_encodeText(app->qrcode_text, qrcodeModel->buffer, qrcodeModel->qrcode, errCorLvl,
-			qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
-	view_commit_model(app->qrcode_canvas_view, false);
-
+	generate_qrcode(app);
+	
 	view_dispatcher_switch_to_view(app->view_dispatcher, QrCodeCanvasView);
 }
 
@@ -326,10 +331,7 @@ void saved_scene_on_enter(void *context) {
 	//UNUSED(context);
 	App *app = context;
 
-	// TODO: Extract code to function, it is duplicate!!!!
-	QrCodeModel *qrcodeModel = view_get_model(app->qrcode_canvas_view);
-	enum qrcodegen_Ecc errCorLvl = qrcodegen_Ecc_LOW;
-
+	// Creates and open the flipper file picker
 	FuriString* file_path = furi_string_alloc();
 	furi_string_set(file_path, QRCODE_GEN_FOLDER);
 
@@ -349,26 +351,7 @@ void saved_scene_on_enter(void *context) {
 	// TODO: Update read function!!!
 	//read_text_from_file(furi_string_get_cstr(file_path), app->qrcode_text);
 	app->qrcode_text = strdup(furi_string_get_cstr(file_path));
-
-
-	// Allocate buffers if not already allocated
-	static const size_t buffer_len = qrcodegen_BUFFER_LEN_MAX;
-	static const size_t qrcode_len = qrcodegen_BUFFER_LEN_MAX;
-
-	if (!qrcodeModel->buffer) {
-		qrcodeModel->buffer = malloc(buffer_len);
-		furi_check(qrcodeModel->buffer); // Optional safety check
-	}
-
-	if (!qrcodeModel->qrcode) {
-		qrcodeModel->qrcode = malloc(qrcode_len);
-		furi_check(qrcodeModel->qrcode); // Optional safety check
-	}
-
-	qrcodegen_encodeText(app->qrcode_text, qrcodeModel->buffer, qrcodeModel->qrcode, errCorLvl,
-			qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
-	view_commit_model(app->qrcode_canvas_view, false);
-
+	generate_qrcode(app);
 
 	furi_record_close(RECORD_DIALOGS);
 	view_dispatcher_switch_to_view(app->view_dispatcher, QrCodeCanvasView);
