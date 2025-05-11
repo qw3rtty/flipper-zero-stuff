@@ -103,7 +103,7 @@ void write_text_to_file(const char* file_path, const char* text) {
 }
 
 // Function to read text from a file
-void read_text_from_file(const char* file_path) {
+void read_text_from_file(const char* file_path, App* app) {
     Storage* storage = furi_record_open(RECORD_STORAGE);
     if (!storage) {
         printf("Failed to open storage\n");
@@ -120,6 +120,8 @@ void read_text_from_file(const char* file_path) {
             printf("Read from file: %s\n", buffer);
         }
 
+		// Apply file context to app context
+		app->qrcode_text = strdup(buffer);
         storage_file_close(file);
     } else {
         printf("Failed to open file for reading\n");
@@ -348,9 +350,7 @@ void saved_scene_on_enter(void *context) {
 		return;
 	}
 
-	// TODO: Update read function!!!
-	//read_text_from_file(furi_string_get_cstr(file_path), app->qrcode_text);
-	app->qrcode_text = strdup(furi_string_get_cstr(file_path));
+	read_text_from_file(furi_string_get_cstr(file_path), app);
 	generate_qrcode(app);
 
 	furi_record_close(RECORD_DIALOGS);
