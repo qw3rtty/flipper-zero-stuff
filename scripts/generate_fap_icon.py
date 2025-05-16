@@ -1,7 +1,7 @@
 from PIL import Image
 
-# Define the pattern, which looks like an QRCode 
-qr_pattern = [
+# Define the pattern for the icon
+fap_icon_pattern = [
     [1, 1, 1, 0, 1, 0, 0, 1, 1, 1],
     [1, 0, 1, 0, 0, 1, 0, 1, 0, 1],
     [1, 1, 1, 0, 1, 0, 0, 1, 1, 1],
@@ -23,8 +23,8 @@ pixels = img.load()
 # Set the pixels based on the pattern
 for y in range(10):
     for x in range(10):
-        pixels[x, y] = qr_pattern[y][x]
+        pixels[x, y] = fap_icon_pattern[y][x]
 
 # Save the image
-img.save("qrcode_generator.png")
+img.save("fap_icon.png")
 
