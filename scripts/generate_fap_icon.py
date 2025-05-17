@@ -1,3 +1,9 @@
+# This script generates a 1-bit 10x10px image which could be used as icon
+# for flipper zero applications
+#
+# @Author: qw3rtty
+# @Repository: github.com/qw3rtty/flipper-zero-stuff
+
 from PIL import Image
 
 # Define the pattern for the icon
