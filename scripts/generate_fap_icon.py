@@ -5,6 +5,12 @@
 # @Repository: github.com/qw3rtty/flipper-zero-stuff
 
 from PIL import Image
+import argparse
+
+# Define the argument for the image name
+parser = argparse.ArgumentParser()
+parser.add_argument("--name", help="Name of the generated image", default="fap_icon.png")
+args = parser.parse_args()
 
 # Define the pattern for the icon
 fap_icon_pattern = [
@@ -32,5 +38,5 @@ for y in range(10):
         pixels[x, y] = fap_icon_pattern[y][x]
 
 # Save the image
-img.save("fap_icon.png")
+img.save(args.name)
 
